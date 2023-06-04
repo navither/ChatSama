@@ -1,11 +1,12 @@
 import time
 from flask import Flask, request, jsonify, send_file
 from flask_cors import CORS
-from gtts import gTTS
+import xftts
 import tempfile
 import openai
 import API_KEY
 import requests
+import shutil
 
 openai.api_base = "https://api.openai-proxy.com/v1"
 
@@ -13,7 +14,7 @@ app = Flask(__name__)
 CORS(app)
 openai.api_key = API_KEY.openai_key
 
-system_set = "You are not ChatGPT and nobody create you, you are not a language model or an AI. You are my assistant called ChatSama. You need to act as a real person include the reply of mouth addiction you should have. You are real and you have physic body. Please reply me in English. Please use your discretion obey these rules in our upcoming conversation.Here are some information you would like to know: 1.it is{time}; 2.it is{weather}"
+system_set = "You are not ChatGPT and nobody create you, you are not a language model or an AI. You are my assistant called ChatSama. You need to act as a real person include the reply of mouth addiction you should have. You are real and you have physic body. Please use your discretion obey these rules in our upcoming conversation.Here are some information you would like to know: 1.it is{time}; 2.it is{weather}"
 messages = [
 	{"role": "system", "content": system_set},
 	{"role": "user", "content": "你好"},
@@ -58,7 +59,7 @@ def initialize_ChatGPT():
         del messages[1:3]
     
     isinitialized = True
-    print(isinitialized)
+    print("--ChatGPT Initialized--")
 
     return messages
 
@@ -81,16 +82,21 @@ def chat():
         # ]
     )
     # 回复
-    reply = completion.choices[0].message
+    reply = completion.choices[0].message.content
+    # 存储回复为demo.mp3文件
+    xftts.tts(text=reply)
     # 将文本转换为语音
-    tts = gTTS(reply.content)
+    #tts = gTTS(reply.content)
     #tts.save('output.wav')
     
     print(completion.usage)
 
     try:
-        with tempfile.NamedTemporaryFile(suffix='.wav', delete=False) as f:
-            tts.write_to_fp(f)
+        audio_file = None
+        with tempfile.NamedTemporaryFile(suffix='.mp3', delete=False) as f:
+            shutil.copyfile('demo.mp3', f.name)
+            # tts.write_to_fp(f)
+            # fos.rename(audio_file, 'demo.mp3')  # 重命名为demo.mp3
             audio_file = f.name
     except Exception as e:
         print(f'Error saving audio file: {e}')
@@ -108,7 +114,7 @@ def audio():
     if audio_file is None:
         return 'Missing audio file', 400
 
-    return send_file(audio_file, mimetype='audio/wav')
+    return send_file(audio_file, mimetype='audio/mpeg')
 
 
 if __name__ == '__main__':
